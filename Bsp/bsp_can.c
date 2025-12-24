@@ -45,15 +45,15 @@ void can_user_init(CAN_HandleTypeDef* hcan )
    
   if (HAL_CAN_ConfigFilter(hcan, &can_filter)!=HAL_OK)
   {
-    init_fault();
+    //init_fault();
   };        // init can filter
-  if (HAL_CAN_Start(&hcan1)!=HAL_OK)
+  if (HAL_CAN_Start(hcan)!=HAL_OK)
   {
-    init_fault();
+    //init_fault();
   };                          // start can1
-  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING)!=HAL_OK)
+  if (HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING)!=HAL_OK)
   {
-    init_fault();
+    //init_fault();
   }; // enable can1 rx interrupt
 }
 
@@ -69,7 +69,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   //can_cnt ++;//测试是否进回调函数
   CAN_RxHeaderTypeDef rx_header;
   uint8_t             rx_data[8];
-  if(hcan->Instance == CAN1)
+  if(hcan->Instance == CAN2)
   {
     HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data); //receive can data
   }
@@ -83,11 +83,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     motor_info[index].torque_current = ((rx_data[4] << 8) | rx_data[5]);
     motor_info[index].temp           =   rx_data[6];
   }
-  if (can_cnt == 500)
-  {
-    can_cnt = 0;
-    LED_GREEN_TOGGLE(); // green led blink indicate can comunication successful 
-  }
 }
 
 /**
@@ -96,12 +91,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   * @param  motor voltage 1,2,3,4 or 5,6,7
   * @retval None
   */
-void set_motor_voltage(uint8_t id_range, int16_t v1, int16_t v2, int16_t v3, int16_t v4)
+void set_motor_voltage(CAN_HandleTypeDef hcan,uint8_t id_range, int16_t v1, int16_t v2, int16_t v3, int16_t v4)
 {
   CAN_TxHeaderTypeDef tx_header;
   uint8_t             tx_data[8];
   //设置报文头
-  tx_header.StdId = (id_range == 0)?(0x1ff):(0x2ff);
+  tx_header.StdId = 0x200;//(id_range == 0)?(0x1ff):(0x2ff);
   tx_header.IDE   = CAN_ID_STD;
   tx_header.RTR   = CAN_RTR_DATA;
   tx_header.DLC   = 8;
@@ -114,8 +109,8 @@ void set_motor_voltage(uint8_t id_range, int16_t v1, int16_t v2, int16_t v3, int
   tx_data[5] =    (v3)&0xff;
   tx_data[6] = (v4>>8)&0xff;
   tx_data[7] =    (v4)&0xff;
-  if (HAL_CAN_AddTxMessage(&hcan1, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0)!=HAL_OK)
+  if (HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0)!=HAL_OK)
   {
-    init_fault();
+    //init_fault();
   };
 }

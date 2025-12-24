@@ -54,38 +54,36 @@ pid_struct_t motor_pid[7];
 extern rc_info_t rc;
 
 /* USER CODE END Variables */
-/* Definitions for Chassis */
-osThreadId_t ChassisHandle;
-const osThreadAttr_t Chassis_attributes = {
-  .name = "Chassis",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
-/* Definitions for Gimbal */
-osThreadId_t GimbalHandle;
-const osThreadAttr_t Gimbal_attributes = {
-  .name = "Gimbal",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
-};
-/* Definitions for RemoteControl */
-osThreadId_t RemoteControlHandle;
-const osThreadAttr_t RemoteControl_attributes = {
-  .name = "RemoteControl",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
+osThreadId ChassisHandle;
+osThreadId GimbalHandle;
+osThreadId RemoteControlHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void StartChassisTask(void *argument);
-void StartGimbalTask(void *argument);
-void StartRcTask(void *argument);
+void StartChassisTask(void const * argument);
+void StartGimbalTask(void const * argument);
+void StartRcTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/* GetIdleTaskMemory prototype (linked to static allocation support) */
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
+
+/* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
+static StaticTask_t xIdleTaskTCBBuffer;
+static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
+{
+  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+  *ppxIdleTaskStackBuffer = &xIdleStack[0];
+  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+  /* place for user code */
+}
+/* USER CODE END GET_IDLE_TASK_MEMORY */
 
 /**
   * @brief  FreeRTOS initialization
@@ -114,22 +112,21 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of Chassis */
-  ChassisHandle = osThreadNew(StartChassisTask, NULL, &Chassis_attributes);
+  /* definition and creation of Chassis */
+  osThreadDef(Chassis, StartChassisTask, osPriorityAboveNormal, 0, 128);
+  ChassisHandle = osThreadCreate(osThread(Chassis), NULL);
 
-  /* creation of Gimbal */
-  GimbalHandle = osThreadNew(StartGimbalTask, NULL, &Gimbal_attributes);
+  /* definition and creation of Gimbal */
+  osThreadDef(Gimbal, StartGimbalTask, osPriorityRealtime, 0, 128);
+  GimbalHandle = osThreadCreate(osThread(Gimbal), NULL);
 
-  /* creation of RemoteControl */
-  RemoteControlHandle = osThreadNew(StartRcTask, NULL, &RemoteControl_attributes);
+  /* definition and creation of RemoteControl */
+  osThreadDef(RemoteControl, StartRcTask, osPriorityHigh, 0, 128);
+  RemoteControlHandle = osThreadCreate(osThread(RemoteControl), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
 }
 
@@ -140,12 +137,32 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_StartChassisTask */
-void StartChassisTask(void *argument)
+void StartChassisTask(void const * argument)
 {
   /* USER CODE BEGIN StartChassisTask */
+  extern int16_t Vx,Vy;
+  extern int16_t wheel_speed[4];
+  can_user_init(&hcan2);//滤波器设置，开启CAN
   /* Infinite loop */
   for(;;)
   {
+    Vx=rc.ch3;
+    Vy=rc.ch4;
+    wheel_speed[0] = -Vx - Vy ;
+    wheel_speed[1] = Vx - Vy ;
+    wheel_speed[2] = Vx + Vy ;
+    wheel_speed[3] = -Vx + Vy;
+    for (uint8_t i = 0; i < 4; i++)
+    {
+      motor_info[i].set_voltage = pid_calc(&motor_pid[i], wheel_speed[i], motor_info[i].rotor_speed);
+    }
+    /* send motor control message through can bus*/
+    set_motor_voltage(hcan2,
+                      0,
+                      motor_info[0].set_voltage,
+                      motor_info[1].set_voltage,
+                      motor_info[2].set_voltage,
+                      motor_info[3].set_voltage);
     osDelay(1);
   }
   /* USER CODE END StartChassisTask */
@@ -158,12 +175,13 @@ void StartChassisTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartGimbalTask */
-void StartGimbalTask(void *argument)
+void StartGimbalTask(void const * argument)
 {
   /* USER CODE BEGIN StartGimbalTask */
-  /* Infinite loop */
+
   for(;;)
   {
+
     osDelay(1);
   }
   /* USER CODE END StartGimbalTask */
@@ -176,9 +194,10 @@ void StartGimbalTask(void *argument)
 * @retval None
 */
 /* USER CODE END Header_StartRcTask */
-void StartRcTask(void *argument)
+void StartRcTask(void const * argument)
 {
   /* USER CODE BEGIN StartRcTask */
+
   /* Infinite loop */
   for(;;)
   {
@@ -191,4 +210,3 @@ void StartRcTask(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

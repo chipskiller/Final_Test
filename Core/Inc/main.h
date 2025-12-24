@@ -53,10 +53,18 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+#define LIMIT_MIN_MAX(x,min,max) (x) = (((x)<=(min))?(min):(((x)>=(max))?(max):(x)))
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define POWER1_CTRL_Pin GPIO_PIN_2
+#define POWER1_CTRL_GPIO_Port GPIOH
+#define POWER2_CTRL_Pin GPIO_PIN_3
+#define POWER2_CTRL_GPIO_Port GPIOH
+#define POWER3_CTRL_Pin GPIO_PIN_4
+#define POWER3_CTRL_GPIO_Port GPIOH
+#define POWER4_CTRL_Pin GPIO_PIN_5
+#define POWER4_CTRL_GPIO_Port GPIOH
 
 /* USER CODE BEGIN Private defines */
 
