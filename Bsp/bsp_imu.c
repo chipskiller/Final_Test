@@ -18,7 +18,7 @@
 
 #define BOARD_DOWN (1)   
 #define IST8310
-#define MPU_HSPI hspi1
+#define MPU_HSPI hspi5
 #define MPU_NSS_LOW HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_RESET)
 #define MPU_NSS_HIGH HAL_GPIO_WritePin(GPIOF, GPIO_PIN_6, GPIO_PIN_SET)
 

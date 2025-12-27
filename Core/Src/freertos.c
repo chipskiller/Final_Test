@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_can.h"
+#include "bsp_imu.h"
 #include "pid.h"
 #include "bsp_uart.h"
 /* USER CODE END Includes */
@@ -146,7 +147,7 @@ void StartChassisTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    if (rc.sw1==3)//平移模式
+    if (rc.sw1==2)//平移模式
     {
       Vx=rc.ch3;
       Vy=rc.ch4;
@@ -203,9 +204,17 @@ void StartChassisTask(void const * argument)
 void StartGimbalTask(void const * argument)
 {
   /* USER CODE BEGIN StartGimbalTask */
-
+  //yaw:2360R-6590L
+  //pit:6778L-2605H
   for(;;)
   {
+    mpu_get_data();
+    imu_ahrs_update();
+    imu_attitude_update();
+    // for (uint8_t i = 4; i < 6; i++)
+    // {
+    //   motor_info[i].set_voltage = pid_calc(&motor_pid[i], target_angle, motor_info[i].rotor_angle);
+    // }
 
     osDelay(1);
   }

@@ -40,19 +40,19 @@ void can_user_init(CAN_HandleTypeDef* hcan )
   can_filter.FilterMaskIdLow  = 0;                // set mask 0 to receive all can id
   can_filter.FilterFIFOAssignment = CAN_RX_FIFO0; // assign to fifo0
   can_filter.FilterActivation = ENABLE;           // enable can filter
-  can_filter.SlaveStartFilterBank  = 14;          // only meaningful in dual can mode
+  can_filter.SlaveStartFilterBank  = 0;          // only meaningful in dual can mode
    
   if (HAL_CAN_ConfigFilter(hcan, &can_filter)!=HAL_OK)
   {
-    //init_fault();
+    init_fault();
   };        // init can filter
   if (HAL_CAN_Start(hcan)!=HAL_OK)
   {
-    //init_fault();
+    init_fault();
   };                          // start can1
   if (HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING)!=HAL_OK)
   {
-    //init_fault();
+    init_fault();
   }; // enable can1 rx interrupt
 }
 
@@ -65,7 +65,7 @@ void can_user_init(CAN_HandleTypeDef* hcan )
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
   //init_fault();
-  //can_cnt ++;//测试是否进回调函数
+  can_cnt ++;//测试是否进回调函数
   if(hcan->Instance == CAN2)
   {
     CAN_RxHeaderTypeDef rx_header;
@@ -76,20 +76,37 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     if ((rx_header.StdId >= FEEDBACK_ID_BASE)
         && (rx_header.StdId <  FEEDBACK_ID_BASE + MOTOR_MAX_NUM))//验证回报id                  // judge the can id
     {
-      can_cnt ++;
+      //can_cnt ++;
       uint8_t index = rx_header.StdId - FEEDBACK_ID_BASE;                  // get motor index by can_id
       motor_info[index].rotor_angle    = ((rx_data[0] << 8) | rx_data[1]);
       motor_info[index].rotor_speed    = ((rx_data[2] << 8) | rx_data[3]);
       motor_info[index].torque_current = ((rx_data[4] << 8) | rx_data[5]);
       motor_info[index].temp           =   rx_data[6];
     }
+  }
+    if ((hcan->Instance == CAN1))
+    {
+      CAN_RxHeaderTypeDef rx_header;
+      uint8_t             rx_data[8];
+      HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data); //receive can data
+      if ((rx_header.StdId >= FEEDBACK_ID_BASE+4)
+        && (rx_header.StdId <  FEEDBACK_ID_BASE + MOTOR_MAX_NUM+2))//验证回报id                  // judge the can id
+      {
+        //can_cnt ++;
+        uint8_t index = rx_header.StdId - 0x205/*6020_Base_Id*/+4;                  // get motor index by can_id
+        motor_info[index].rotor_angle    = ((rx_data[0] << 8) | rx_data[1]);
+        motor_info[index].rotor_speed    = ((rx_data[2] << 8) | rx_data[3]);
+        motor_info[index].torque_current = ((rx_data[4] << 8) | rx_data[5]);
+        motor_info[index].temp           =   rx_data[6];
+      }
+    }
     if (can_cnt==500)
     {
       HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
       can_cnt = 0;
     }
-  }
 }
+
 
 /**
   * @brief  send motor control message through can bus
@@ -109,7 +126,7 @@ void set_motor_voltage(CAN_HandleTypeDef hcan,uint8_t id_range, int16_t v1, int1
   //设置发送数据
   tx_data[0] = (v1>>8)&0xff;
   tx_data[1] =    (v1)&0xff;
-  tx_data[2] = (v2>>8)&0xff;
+  tx_data[2] =(v2>>8)&0xff;
   tx_data[3] =    (v2)&0xff;
   tx_data[4] = (v3>>8)&0xff;
   tx_data[5] =    (v3)&0xff;
@@ -117,6 +134,6 @@ void set_motor_voltage(CAN_HandleTypeDef hcan,uint8_t id_range, int16_t v1, int1
   tx_data[7] =    (v4)&0xff;
   if (HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data,(uint32_t*)CAN_TX_MAILBOX0)!=HAL_OK)
   {
-    //init_fault();
+    init_fault();
   };
 }

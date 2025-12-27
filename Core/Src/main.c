@@ -28,6 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_can.h"
+#include "bsp_imu.h"
 #include "bsp_uart.h"
 #include "pid.h"
 /* USER CODE END Includes */
@@ -106,18 +107,23 @@ int main(void)
   MX_DMA_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
-  MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_SPI5_Init();
   /* USER CODE BEGIN 2 */
-  can_user_init(&hcan2);//滤波器设置，开启CAN
+  can_user_init(&hcan2);
+  can_user_init(&hcan1);//滤波器设置，开启CAN
   dbus_uart_init();
-  // can_user_init(&hcan1);//滤波器设置，开启CAN  /* Infinite loop */
-  for (uint8_t i = 0; i < 7; i++)
+  mpu_device_init();
+  init_quaternion();
+  for (uint8_t i = 0; i < 4; i++)
   {
-    pid_init(&motor_pid[i], 50, 6, 2, 300, 300); //init pid parameter, kp=40, ki=3, kd=0, output limit = 30000
+    pid_init(&motor_pid[i], 50, 6, 2, 0, 1000); //init pid parameter, kp=40, ki=3, kd=0, output limit = 30000
   }
-  // dbus_uart_init();
-  //HAL_GPIO_WritePin(GPIOH, POWER1_CTRL_Pin|POWER2_CTRL_Pin|POWER3_CTRL_Pin|POWER4_CTRL_Pin, GPIO_PIN_SET); // switch on 24v power
+  for (uint8_t i = 4; i < 6; i++)
+  {
+    pid_init(&motor_pid[i], 50, 6, 2, 0, 1000); //init pid parameter, kp=40, ki=3, kd=0, output limit = 30000
+  }
+  HAL_GPIO_WritePin(GPIOH, POWER1_CTRL_Pin|POWER2_CTRL_Pin|POWER3_CTRL_Pin|POWER4_CTRL_Pin, GPIO_PIN_SET); // switch on 24v power
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in cmsis_os2.c) */
